@@ -18,8 +18,14 @@ import java.util.logging.Logger;
  * @author ishashori
  */
 public class Client extends Thread {
+    String ip;
+    String port;
+    String msg;
     
-    Client(){
+    Client(String i, String p, String msg){
+        ip = i;
+        port = p;
+        this.msg= msg;
         start();
     }
 
@@ -30,12 +36,12 @@ public class Client extends Thread {
         Socket clientSocket;
         try {
             System.out.println("IN CLIENT");
-            clientSocket = new Socket("localhost", 10055);
+            clientSocket = new Socket(ip, Integer.parseInt(port));
 
             DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
             BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             //sentence = inFromUser.readLine();
-            //outToServer.writeBytes(sentence + '\n');
+            outToServer.writeBytes(msg + '\n');
             modifiedSentence = inFromServer.readLine();
             //System.out.println("FROM SERVER: " + modifiedSentence);
             clientSocket.close();

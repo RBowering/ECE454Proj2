@@ -36,7 +36,9 @@ public class Server extends Thread {
             BufferedReader inFromClient = new BufferedReader(new InputStreamReader(connectionSocket.getInputStream()));
             DataOutputStream outToClient = new DataOutputStream(connectionSocket.getOutputStream());
             clientSentence = inFromClient.readLine();
+            Buffers.msgBuffer.add(clientSentence);
             System.out.println("Received: " + clientSentence);
+            //get peer to run the code
             capitalizedSentence = clientSentence + '\n';
             outToClient.writeBytes(capitalizedSentence);
             welcomeSocket.close();
