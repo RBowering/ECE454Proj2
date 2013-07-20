@@ -21,53 +21,6 @@ public class Peer {
     static String ourDev;
     static String basePath = "/Users/ishashori/4A-S13/JavaApplication2/src/Distributed/";
 
-    /*public String getMac()
-     {
-     InetAddress ip;
-     StringBuilder sb = new StringBuilder();
-     try 
-     {
-			
-     ip = InetAddress.getLocalHost();
-     System.out.println("Current IP address : " + ip.getHostAddress());
-	 
-     NetworkInterface network = NetworkInterface.getByInetAddress(ip);
-	 
-     byte[] mac = network.getHardwareAddress();
-	 
-     System.out.print("Current MAC address : ");
-	 
-			
-     for (int i = 0; i < mac.length; i++) {
-     sb.append(String.format("%02X%s", mac[i], (i < mac.length - 1) ? "-" : ""));		
-     }
-     System.out.println(sb.toString());
-	 
-     } catch (UnknownHostException e) {
-	 
-     e.printStackTrace();
-	 
-     } catch (SocketException e){
-	 
-     e.printStackTrace();
-	 
-     }
-     return sb.toString();
-     }*/
-    /*public static void client () throws Exception
-     {
-     String sentence;   
-     String modifiedSentence;   
-     BufferedReader inFromUser = new BufferedReader( new InputStreamReader(System.in));   
-     Socket clientSocket = new Socket("localhost", 10049);   
-     DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());   
-     BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));   
-     sentence = inFromUser.readLine();   
-     outToServer.writeBytes(sentence + '\n');   
-     modifiedSentence = inFromServer.readLine();   
-     System.out.println("FROM SERVER: " + modifiedSentence);   
-     clientSocket.close();
-     }*/
     public static void main(String[] args) throws Exception {
         // TODO Auto-generated method stub
         Server server = new Server();
@@ -92,12 +45,9 @@ public class Peer {
             }
             while (true) {
                 String in[];
-                if (!Buffers.msgBuffer.isEmpty())
-                {
+                if (!Buffers.msgBuffer.isEmpty()) {
                     in = Buffers.msgBuffer.remove().split(" ");
-                }
-                else
-                {
+                } else {
                     input = inFromUser.readLine();
 
                     in = input.split(" ");
@@ -204,11 +154,20 @@ public class Peer {
     private static void read(String fileName, char[] charBuff, int offset, int buffsize) {
         for (int i = 0; i < flist.size(); i++) {
             if (flist.get(i).name.equals(fileName)) {
-                try {
-                    flist.get(i).fileIn.read(charBuff, offset, buffsize);
-                    System.out.println(charBuff);
-                } catch (IOException ex) {
-                    Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
+                if (flist.get(i).loc.equals(ourDev)) {
+                    try {
+                        flist.get(i).fileIn.read(charBuff, offset, buffsize);
+                        System.out.println(charBuff);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } else {
+                    for (int j = 0; j < dlist.size(); j++) {
+
+                        if (flist.get(i).loc.equals(dlist.get(j).dev)) {
+                            Client c = new Client(dlist.get(j).ip, dlist.get(j).port, "read" + fileName + " " + offset + " " + buffsize);
+                        }
+                    }
                 }
             }
         }
@@ -219,12 +178,21 @@ public class Peer {
         //look for input and determine its size
         for (int i = 0; i < flist.size(); i++) {
             if (flist.get(i).name.equals(fileName)) {
-                try {
-                    flist.get(i).fileOut.write(charBuff, offset, buffsize);
-                    System.out.println(charBuff);
+                if (flist.get(i).loc.equals(ourDev)) {
+                    try {
+                        flist.get(i).fileOut.write(charBuff, offset, buffsize);
+                        System.out.println(charBuff);
 
-                } catch (IOException ex) {
-                    Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (IOException ex) {
+                        Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                } else {
+                    for (int j = 0; j < dlist.size(); j++) {
+
+                        if (flist.get(i).loc.equals(dlist.get(j).dev)) {
+                            Client c = new Client(dlist.get(j).ip, dlist.get(j).port, "write" + fileName + " " + offset);
+                        }
+                    }
                 }
             }
         }
@@ -233,15 +201,24 @@ public class Peer {
     private static void close(String fileName) {
         for (int i = 0; i < flist.size(); i++) {
             if (flist.get(i).name.equals(fileName)) {
-                try {
-                    if (flist.get(i).fIn == 1) {
-                        flist.get(i).fileIn.close();
+                if (flist.get(i).loc.equals(ourDev)) {
+                    try {
+                        if (flist.get(i).fIn == 1) {
+                            flist.get(i).fileIn.close();
+                        }
+                        if (flist.get(i).fOut == 1) {
+                            flist.get(i).fileOut.close();
+                        }
+                    } catch (IOException ex) {
+                        Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
                     }
-                    if (flist.get(i).fOut == 1) {
-                        flist.get(i).fileOut.close();
+                } else {
+                    for (int j = 0; j < dlist.size(); j++) {
+
+                        if (flist.get(i).loc.equals(dlist.get(j).dev)) {
+                            Client c = new Client(dlist.get(j).ip, dlist.get(j).port, "close" + fileName);
+                        }
                     }
-                } catch (IOException ex) {
-                    Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
                 }
             }
         }
