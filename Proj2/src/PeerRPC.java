@@ -23,7 +23,9 @@ public class PeerRPC extends Thread{
 	static List<File_Desc> flist = new ArrayList<File_Desc>();
     static List<Device> dlist = new ArrayList<Device>();
     static String ourDev;
-    static String basePath = "/home/rbowerin/ece454/Proj2/src/";
+     //static String basePath = "/home/rbowerin/ece454/Proj2/src/";
+    static String basePath = "/Users/ishashori/4A-S13/JavaApplication2/src/Distributed/";
+    private static String downloadPath;
     private final BlockingQueue q;
     public PeerRPC(BlockingQueue q)
 	{ 
@@ -212,6 +214,43 @@ public class PeerRPC extends Thread{
             }
         }
     }
+    
+    private static void save(String fileName, char[] charBuff, int offset, int buffsize) {
+        for (int i = 0; i < flist.size(); i++) {
+            if (flist.get(i).name.equals(fileName)) {
+                if (flist.get(i).loc.equals(ourDev)) {
+                    try {
+                        flist.get(i).fileOut.flush();
+                    } catch (Exception ex) {
+                        File file = new File(downloadPath + fileName);
+                        if (!file.exists()) {
+                            try {
+                                file.createNewFile();
+                                FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                                fw.write(charBuff, offset, buffsize);
+                                fw.flush();
+                                insert(file.getName());
+                                fw.close();
+                            } catch (IOException ex1) {
+                                Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex1);
+                            }
+                        }
+                        System.out.print("Error!! Saving file so a copy is saved in the download folder");
+
+                    }
+                } else {
+                    for (int j = 0; j < dlist.size(); j++) {
+
+                        if (flist.get(i).loc.equals(dlist.get(j).dev)) {
+                            Client c = new Client(dlist.get(j).ip, dlist.get(j).port, "save " + fileName);
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
 
     private static void close(String fileName) {
         for (int i = 0; i < flist.size(); i++) {
@@ -302,17 +341,31 @@ public class PeerRPC extends Thread{
     }
 
     private static void delete(String fileName) {
-        File file = new File(basePath + fileName);
-        if (file.delete()) {
-            System.out.println("DELETE filename: " + fileName);
-        }
         for (int i = 0; i < flist.size(); i++) {
             if (flist.get(i).name.equals(fileName)) {
-                flist.remove(i);
+                if (flist.get(i).loc.equals(ourDev)) {
+
+                    File file = new File(basePath + fileName);
+                    if (file.delete()) {
+                        System.out.println("DELETE filename: " + fileName);
+                    }
+                    for (int j = 0; j < flist.size(); j++) {
+                        if (flist.get(j).name.equals(fileName)) {
+                            flist.remove(j);
+                        }
+                    }
+
+                    remove(fileName);
+                } else {
+                    for (int k = 0; k < dlist.size(); k++) {
+
+                        if (flist.get(i).loc.equals(dlist.get(k).dev)) {
+                            Client c = new Client(dlist.get(k).ip, dlist.get(k).port, "delete " + fileName);
+                        }
+                    }
+                }
             }
         }
-
-        remove(fileName);
     }
 
     private static void findDevice() {

@@ -18,31 +18,29 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.Enumeration;
 
-
-
-public class Peer extends Thread{
+public class Peer extends Thread {
 
     static List<File_Desc> flist = new ArrayList<File_Desc>();
     static List<Device> dlist = new ArrayList<Device>();
     static String ourDev;
-    static String basePath = "/home/rbowerin/ece454/Proj2/src/";
-    
-    public Peer()
-	{ 
-	    
-	}
-   
-    public void run () {
-       findDevice();
-	
-		Scanner br = null;
-        
-        try {
-	    BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
-        String input = "";
+    //static String basePath = "/home/rbowerin/ece454/Proj2/src/";
+    static String basePath = "/Users/ishashori/4A-S13/JavaApplication2/src/Distributed/";
+    static String downloadPath;
 
-        br = new Scanner(new FileReader(basePath
-                + "file.txt"));
+    public Peer() {
+    }
+
+    public void run() {
+        findDevice();
+
+        Scanner br = null;
+
+        try {
+            BufferedReader inFromUser = new BufferedReader(new InputStreamReader(System.in));
+            String input = "";
+
+            br = new Scanner(new FileReader(basePath
+                    + "file.txt"));
             StringBuilder sb = new StringBuilder();
             while (br.hasNextLine()) {
                 String line = br.nextLine();
@@ -52,17 +50,16 @@ public class Peer extends Thread{
                 flist.add(new File_Desc(sline[0], sline[1]));
 
             }
-			br.close();
-            while (true) 
-			{
+            br.close();
+            while (true) {
                 String in[];
-				System.out.println("Our device: "+ourDev);
-				
-                
-				input = inFromUser.readLine();
+                System.out.println("Our device: " + ourDev);
 
-				in = input.split(" ");
-			
+
+                input = inFromUser.readLine();
+
+                in = input.split(" ");
+
                 if (in[0].equals("open")) {
                     open(in[1], in[2]);
 
@@ -99,12 +96,8 @@ public class Peer extends Thread{
 
                 }
             }
-        } 
-	catch (Exception e)
-	{
-
-	}
-	finally {
+        } catch (Exception e) {
+        } finally {
             br.close();
         }
 
@@ -197,6 +190,7 @@ public class Peer extends Thread{
                 if (flist.get(i).loc.equals(ourDev)) {
                     try {
                         flist.get(i).fileOut.write(charBuff, offset, buffsize);
+                        save(fileName, charBuff, offset, buffsize);
                         System.out.println(charBuff);
 
                     } catch (IOException ex) {
@@ -214,6 +208,42 @@ public class Peer extends Thread{
         }
     }
 
+    private static void save(String fileName, char[] charBuff, int offset, int buffsize) {
+        for (int i = 0; i < flist.size(); i++) {
+            if (flist.get(i).name.equals(fileName)) {
+                if (flist.get(i).loc.equals(ourDev)) {
+                    try {
+                        flist.get(i).fileOut.flush();
+                    } catch (Exception ex) {
+                        File file = new File(downloadPath + fileName);
+                        if (!file.exists()) {
+                            try {
+                                file.createNewFile();
+                                FileWriter fw = new FileWriter(file.getAbsoluteFile());
+                                fw.write(charBuff, offset, buffsize);
+                                fw.flush();
+                                insert(file.getName());
+                                fw.close();
+                            } catch (IOException ex1) {
+                                Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex1);
+                            }
+                        }
+                        System.out.print("Error!! Saving file so a copy is saved in the download folder");
+
+                    }
+                } else {
+                    for (int j = 0; j < dlist.size(); j++) {
+
+                        if (flist.get(i).loc.equals(dlist.get(j).dev)) {
+                            Client c = new Client(dlist.get(j).ip, dlist.get(j).port, "save " + fileName);
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
     private static void close(String fileName) {
         for (int i = 0; i < flist.size(); i++) {
             if (flist.get(i).name.equals(fileName)) {
@@ -224,9 +254,12 @@ public class Peer extends Thread{
                         }
                         if (flist.get(i).fOut == 1) {
                             flist.get(i).fileOut.close();
+
+
                         }
                     } catch (IOException ex) {
-                        Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Peer.class
+                                .getName()).log(Level.SEVERE, null, ex);
                     }
                 } else {
                     for (int j = 0; j < dlist.size(); j++) {
@@ -303,95 +336,111 @@ public class Peer extends Thread{
     }
 
     private static void delete(String fileName) {
-        File file = new File(basePath + fileName);
-        if (file.delete()) {
-            System.out.println("DELETE filename: " + fileName);
-        }
         for (int i = 0; i < flist.size(); i++) {
             if (flist.get(i).name.equals(fileName)) {
-                flist.remove(i);
+                if (flist.get(i).loc.equals(ourDev)) {
+
+                    File file = new File(basePath + fileName);
+                    if (file.delete()) {
+                        System.out.println("DELETE filename: " + fileName);
+                    }
+                    for (int j = 0; j < flist.size(); j++) {
+                        if (flist.get(j).name.equals(fileName)) {
+                            flist.remove(j);
+                        }
+                    }
+
+                    remove(fileName);
+                } else {
+                    for (int k = 0; k < dlist.size(); k++) {
+
+                        if (flist.get(i).loc.equals(dlist.get(k).dev)) {
+                            Client c = new Client(dlist.get(k).ip, dlist.get(k).port, "delete " + fileName);
+                        }
+                    }
+                }
             }
         }
-
-        remove(fileName);
     }
 
     private static void findDevice() {
         InetAddress ip;
-InetAddress addr = null;
-String sp[];
+        InetAddress addr = null;
+        String sp[];
         try {
-            
-    NetworkInterface i = NetworkInterface.getByName("eth0");
 
-    if (i != null) {
+            NetworkInterface i = NetworkInterface.getByName("eth0");
 
-        Enumeration<InetAddress> iplist = i.getInetAddresses();
+            if (i != null) {
 
-        
+                Enumeration<InetAddress> iplist = i.getInetAddresses();
 
-        while (iplist.hasMoreElements()) {
-            InetAddress ad = iplist.nextElement();
-            byte bs[] = ad.getAddress();
-            if (bs.length == 4 && bs[0] != 127) {
-                addr = ad;
-                // You could also display the host name here, to 
-                // see the whole list, and remove the break.
-                break;
-            }
-        }
-	}
-        if (addr != null) {
-            System.out.println( addr.getCanonicalHostName() );
-        
-	    
-		String ip_s = addr.getHostAddress();
-		System.out.println("IP   " + ip_s);
-            Scanner br = new Scanner(new FileReader(basePath
-                    + "devices.txt"));
 
-            StringBuilder sb = new StringBuilder();
-            while (br.hasNextLine()) {
-                String line = br.nextLine();
-                String[] sline = line.split(" ");
 
-                System.out.println(sline[0] + " " + sline[1] + " " + sline[2]);
-                dlist.add(new Device(sline[0], sline[1], sline[2], ip_s.equals(sline[1]) ? true : false));
-                if (ip_s.equals(sline[1])) {
-                    ourDev = sline[0];
+                while (iplist.hasMoreElements()) {
+                    InetAddress ad = iplist.nextElement();
+                    byte bs[] = ad.getAddress();
+                    if (bs.length == 4 && bs[0] != 127) {
+                        addr = ad;
+                        // You could also display the host name here, to 
+                        // see the whole list, and remove the break.
+                        break;
+                    }
                 }
             }
-	}
-	else
-	{
-		ip = InetAddress.getLocalHost();
-	
-            
-            sp = ip.toString().split("/");
-	
-            System.out.println("IP   " + sp[1].toString());
-            Scanner br = new Scanner(new FileReader(basePath
-                    + "devices.txt"));
+            if (addr != null) {
+                System.out.println(addr.getCanonicalHostName());
 
-            StringBuilder sb = new StringBuilder();
-            while (br.hasNextLine()) {
-                String line = br.nextLine();
-                String[] sline = line.split(" ");
 
-                System.out.println(sline[0] + " " + sline[1] + " " + sline[2]);
-                dlist.add(new Device(sline[0], sline[1], sline[2], sp[1].toString().equals(sline[1]) ? true : false));
-                if (sp[1].toString().equals(sline[1])) {
-                    ourDev = sline[0];
+                String ip_s = addr.getHostAddress();
+                System.out.println("IP   " + ip_s);
+                Scanner br = new Scanner(new FileReader(basePath
+                        + "devices.txt"));
+
+                StringBuilder sb = new StringBuilder();
+                while (br.hasNextLine()) {
+                    String line = br.nextLine();
+                    String[] sline = line.split(" ");
+
+                    System.out.println(sline[0] + " " + sline[1] + " " + sline[2]);
+                    dlist.add(new Device(sline[0], sline[1], sline[2], ip_s.equals(sline[1]) ? true : false));
+                    if (ip_s.equals(sline[1])) {
+                        ourDev = sline[0];
+                    }
+                }
+            } else {
+                ip = InetAddress.getLocalHost();
+
+
+                sp = ip.toString().split("/");
+
+                System.out.println("IP   " + sp[1].toString());
+                Scanner br = new Scanner(new FileReader(basePath
+                        + "devices.txt"));
+
+                StringBuilder sb = new StringBuilder();
+                while (br.hasNextLine()) {
+                    String line = br.nextLine();
+                    String[] sline = line.split(" ");
+
+                    System.out.println(sline[0] + " " + sline[1] + " " + sline[2]);
+                    dlist.add(new Device(sline[0], sline[1], sline[2], sp[1].toString().equals(sline[1]) ? true : false));
+                    if (sp[1].toString().equals(sline[1])) {
+                        ourDev = sline[0];
+
+
+                    }
                 }
             }
-	}
         } catch (FileNotFoundException ex) {
-            Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Peer.class
+                    .getName()).log(Level.SEVERE, null, ex);
         } catch (UnknownHostException ex) {
-            Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
-        }
-	catch (SocketException ex) {
-            Logger.getLogger(Peer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Peer.class
+                    .getName()).log(Level.SEVERE, null, ex);
+        } catch (SocketException ex) {
+            Logger.getLogger(Peer.class
+                    .getName()).log(Level.SEVERE, null, ex);
         }
 
 
