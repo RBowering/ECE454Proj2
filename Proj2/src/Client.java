@@ -24,6 +24,7 @@ public class Client extends Thread {
     
     Client(String i, String p, String msg){
         ip = i;
+	System.out.println("Client IP: "+ip+":"+p);
         port = p;
         this.msg= msg;
         start();
@@ -39,10 +40,10 @@ public class Client extends Thread {
             clientSocket = new Socket(ip, Integer.parseInt(port));
 
             DataOutputStream outToServer = new DataOutputStream(clientSocket.getOutputStream());
-            BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            //BufferedReader inFromServer = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             //sentence = inFromUser.readLine();
             outToServer.writeBytes(msg + '\n');
-            modifiedSentence = inFromServer.readLine();
+            //modifiedSentence = inFromServer.readLine();
             //System.out.println("FROM SERVER: " + modifiedSentence);
             clientSocket.close();
         } catch (UnknownHostException ex) {

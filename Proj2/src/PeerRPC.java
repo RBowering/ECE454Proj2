@@ -18,18 +18,17 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.Enumeration;
 
+public class PeerRPC extends Thread{
 
-
-public class Peer extends Thread{
-
-    static List<File_Desc> flist = new ArrayList<File_Desc>();
+	static List<File_Desc> flist = new ArrayList<File_Desc>();
     static List<Device> dlist = new ArrayList<Device>();
     static String ourDev;
     static String basePath = "/home/rbowerin/ece454/Proj2/src/";
-    
-    public Peer()
+    private final BlockingQueue q;
+    public PeerRPC(BlockingQueue q)
 	{ 
-	    
+	    this.q = q;
+		
 	}
    
     public void run () {
@@ -48,7 +47,7 @@ public class Peer extends Thread{
                 String line = br.nextLine();
                 String[] sline = line.split(" ");
 
-                System.out.println(sline[0] + " " + sline[1]);
+                
                 flist.add(new File_Desc(sline[0], sline[1]));
 
             }
@@ -57,12 +56,12 @@ public class Peer extends Thread{
 			{
                 String in[];
 				System.out.println("Our device: "+ourDev);
-				
-                
-				input = inFromUser.readLine();
-
-				in = input.split(" ");
-			
+				System.out.println("Buffer empty: "+q.isEmpty());
+                while (q.isEmpty()) 
+				{
+                    continue;
+                }
+				in = ((String)q.remove()).split(" ");
                 if (in[0].equals("open")) {
                     open(in[1], in[2]);
 
@@ -128,7 +127,7 @@ public class Peer extends Thread{
                             for (int j = 0; j < dlist.size(); j++) {
 
                                 if (flist.get(i).loc.equals(dlist.get(j).dev)) {
-                                    Client c = new Client(dlist.get(j).ip, dlist.get(j).port, "open " + fileName + " " + operation + " " + ourDev);
+                                    Client c = new Client(dlist.get(j).ip, dlist.get(j).port, "open " + fileName + " " + operation);
                                 }
                             }
                         }
@@ -396,4 +395,5 @@ String sp[];
 
 
     }
+
 }

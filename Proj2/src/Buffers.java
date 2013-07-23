@@ -12,5 +12,10 @@ import java.util.Queue;
  * @author ishashori
  */
 public class Buffers {
-    public static Queue<String> msgBuffer = new LinkedList<String>();
+    public volatile Queue<String> msgBuffer;
+
+    public Buffers()
+    {
+        msgBuffer = new LinkedList<String>();
+    }
 }
